@@ -4,14 +4,30 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+console.log('index.js is running');
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+const rootElement = document.getElementById('root');
+
+if (rootElement) {
+  try {
+    console.log('Attempting to render the app');
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    );
+    console.log('App rendered successfully');
+  } catch (error) {
+    console.error('Error rendering the app:', error);
+    rootElement.innerHTML = `<div>
+      <h1>Error loading the application</h1>
+      <p>Please check the console for more details and report this issue.</p>
+      <pre>${error.toString()}</pre>
+    </div>`;
+  }
+} else {
+  console.error('Root element not found');
+}
+
 reportWebVitals();
