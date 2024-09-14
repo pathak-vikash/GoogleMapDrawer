@@ -25,7 +25,6 @@ const ActionMenu = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: all 0.3s ease;
 `;
 
 const MenuButton = styled.button`
@@ -53,15 +52,15 @@ const PowerButton = styled(MenuButton)`
   background-color: ${props => props.active ? '#4CAF50' : '#F44336'};
 `;
 
-const ColorStrip = styled.div`
+const ColorPalette = styled.div`
   position: absolute;
-  left: -30px;
+  left: -40px;
   top: 50%;
   transform: translateY(-50%);
   width: 30px;
-  height: 120px;
-  background: linear-gradient(to bottom, red, orange, yellow, green, blue, indigo, violet);
-  border-radius: 15px 0 0 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 `;
 
 const ColorButton = styled.button`
@@ -290,18 +289,73 @@ const MapComponent = () => {
     }
   };
 
-  const colorOptions = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
+  const colorOptions = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF'];
 
   const handleColorChange = (color) => {
     setDrawingColor(color);
     addLog(`Drawing color changed to: ${color}`);
   };
 
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const contents = e.target.result;
+        try {
+          const loadedData = JSON.parse(contents);
+          loadedData.forEach(shapeData => {
+            if (shapeData.type === 'polygon') {
+              const polygon = new window.google.maps.Polygon({
+                paths: shapeData.path,
+                strokeColor: shapeData.strokeColor,
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                fillColor: shapeData.fillColor,
+                fillOpacity: 0.35,
+                editable: true,
+                draggable: true,
+              });
+              polygon.setMap(map);
+              polygon.info = shapeData.info;
+              setShapes(prevShapes => [...prevShapes, polygon]);
+
+              // Add label
+              const center = window.google.maps.geometry.spherical.interpolate(
+                polygon.getPath().getAt(0),
+                polygon.getPath().getAt(2),
+                0.5
+              );
+              const label = new window.google.maps.Marker({
+                position: center,
+                map: map,
+                label: {
+                  text: shapeData.info.name,
+                  color: 'white',
+                  fontSize: '16px',
+                  fontWeight: 'bold'
+                },
+                icon: {
+                  path: window.google.maps.SymbolPath.CIRCLE,
+                  scale: 0
+                }
+              });
+              polygon.label = label;
+            }
+          });
+          addLog('Markings loaded successfully');
+        } catch (error) {
+          addLog('Error loading markings: ' + error.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
   return (
     <FullScreenContainer>
       <MapContainer ref={mapRef} />
       <ActionMenu>
-        <ColorStrip />
         <PowerButton 
           active={menuActive} 
           onClick={() => setMenuActive(!menuActive)}
@@ -312,11 +366,19 @@ const MapComponent = () => {
         {menuActive && (
           <>
             <MenuButton onClick={toggleDrawingMode} style={{ top: 0, left: '50%', transform: 'translateX(-50%)' }} color="#4CAF50">✏️</MenuButton>
-            <MenuButton onClick={() => {}} style={{ top: '25%', right: 0 }} color="#FF0000">📍</MenuButton>
-            <MenuButton onClick={deleteActiveShape} style={{ bottom: '25%', right: 0 }} color="#FF0000">🗑️</MenuButton>
-            <MenuButton onClick={saveMarkings} style={{ bottom: 0, left: '50%', transform: 'translateX(-50%)' }} color="#2196F3">💾</MenuButton>
-            <MenuButton onClick={() => {}} style={{ bottom: '25%', left: 0 }} color="#FFC107">🔍</MenuButton>
-            <div style={{ position: 'absolute', top: '25%', left: 0, display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <MenuButton onClick={deleteActiveShape} style={{ right: 0, top: '50%', transform: 'translateY(-50%)' }} color="#FF0000">🗑️</MenuButton>
+            <MenuButton onClick={saveMarkings} style={{ bottom: 0, left: '25%' }} color="#2196F3">💾</MenuButton>
+            <label htmlFor="file-upload" style={{ cursor: 'pointer' }}>
+              <MenuButton as="span" style={{ bottom: 0, right: '25%' }} color="#FFC107">📂</MenuButton>
+            </label>
+            <input
+              id="file-upload"
+              type="file"
+              accept=".json"
+              style={{ display: 'none' }}
+              onChange={handleFileUpload}
+            />
+            <ColorPalette>
               {colorOptions.map((color) => (
                 <ColorButton
                   key={color}
@@ -324,7 +386,7 @@ const MapComponent = () => {
                   onClick={() => handleColorChange(color)}
                 />
               ))}
-            </div>
+            </ColorPalette>
           </>
         )}
       </ActionMenu>
